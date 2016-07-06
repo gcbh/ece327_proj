@@ -35,9 +35,22 @@ end entity;
 
 
 architecture main of kirsch is
-  signal mem_out, mem_write : std_logic_vector(0 to 2);
+  signal mem_write : std_logic_vector(0 to 2);
   signal col_index, row_index,a,b,c,d,e,f,g,h,i : std_logic_vector(0 to 7);
-
+  signal mem_out : array (0 to 2) of std_logic_vector(0 to 7);
+  function "rol" (a : std_logic_vector; n : natural)
+		return std_logic_vector
+	is
+	begin
+		return std_logic_vector(unsigned(a) rol n);
+	end function;
+	
+  function "sll" (a : std_logic_vector; n : natural)
+		return std_logic_vector
+	is
+	begin
+		return std_logic_vector(unsigned(a) sll n);
+	end function;
 begin  
 
   debug_num_5 <= X"E";
@@ -61,11 +74,10 @@ begin
                 );
   end generate; 
 
-  process
+  transfer_proc: process
     begin
       wait until rising_edge(i_clock);
-      if i_reset = '1' then
-      elsif i_valid = '1' then
+      if i_valid = '1' then
         a <= b;
         b <= c;
         h <= i;
@@ -73,14 +85,33 @@ begin
         f <= e;
         g <= f;
 
-        c <= mem_out(0);
-        d <= mem_out(1);
+        c <= mem_out(resize("rol"(mem_write,1), 2));
+        d <= mem_out(resize("rol"(mem_write,2), 2));
         e <= i_pixel;
         
       else
       end if;
     end process;
-  
+
+  position_proc: process
+    begin
+      wait until rising_edge(i_clock);
+      if i_reset = '1' then
+        row_index <= "00000000";
+        col_index <= "00000000";
+        mem_write <= "001";
+      elsif i_valid = '1' then
+        if col_index = "11111111" then
+          row_index = row_state + 1;
+          mem_write <= "rol"(mem_write,1);
+          col_index <= "00000000";
+        elsif row_index = "11111111" then
+          -- conclude
+        else
+          col_index <= col_index + 1; 
+        end if;
+      end if;
+    end process;
   
 end architecture;
 
