@@ -35,6 +35,9 @@ end entity;
 
 
 architecture main of kirsch is
+  signal mem_out, mem_write : std_logic_vector(0 to 2);
+  signal col_index, row_index,a,b,c,d,e,f,g,h,i : std_logic_vector(0 to 7);
+
 begin  
 
   debug_num_5 <= X"E";
@@ -46,5 +49,50 @@ begin
 
   debug_led_red <= (others => '0');
   debug_led_grn <= (others => '0');
+
+  MEM_GENERATION: for I in 0 to 2 generate
+	mem: entity work.mem(main)
+	port map (
+		address 	=> col_index,
+		clock   	=> i_clock,
+		data  		=> i_pixel,
+                wren    	=> mem_write(I),
+                q  	 	=> mem_out(I)
+                );
+  end generate; 
+
+  process
+    begin
+      wait until rising_edge(i_clock);
+      if i_reset = '1' then
+      elsif i_valid = '1' then
+        a <= b;
+        b <= c;
+        h <= i;
+        i <= d;
+        f <= e;
+        g <= f;
+
+        c <= mem_out(0);
+        d <= mem_out(1);
+        e <= i_pixel;
+        
+      else
+      end if;
+    end process;
+  
   
 end architecture;
+
+procedure DIR_MAX (signal first, first_dir, second, second_dir: in std_logic_vector;
+                   signal result, result_dir : out std_logic_vector) is
+begin
+  if first >= second then
+    result = first;
+    result_dir = first_dir;
+  else
+    result= second;
+    result_dir = second_dir;
+  end if;
+end DIR_MAX;
+      
