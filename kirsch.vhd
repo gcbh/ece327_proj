@@ -4,6 +4,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 
+
 entity kirsch is
   port(
     ------------------------------------------
@@ -35,9 +36,10 @@ end entity;
 
 
 architecture main of kirsch is
-  signal mem_write : std_logic_vector(0 to 2);
+  type memory_out is array (0 to 2) of std_logic_vector (7 downto 0);
+  signal mem_write : std_logic_vector(2 downto 0);
   signal col_index, row_index,a,b,c,d,e,f,g,h,i : std_logic_vector(0 to 7);
-  signal mem_out : array (0 to 2) of std_logic_vector(0 to 7);
+  signal mem_out : memory_out;
   function "rol" (a : std_logic_vector; n : natural)
 		return std_logic_vector
 	is
@@ -51,6 +53,18 @@ architecture main of kirsch is
 	begin
 		return std_logic_vector(unsigned(a) sll n);
 	end function;
+
+  procedure DIR_MAX (signal first, first_dir, second, second_dir: in std_logic_vector;
+                   signal result, result_dir : out std_logic_vector) is
+begin
+  if first >= second then
+    result <= first;
+    result_dir <= first_dir;
+  else
+    result <= second;
+    result_dir <= second_dir;
+  end if;
+end DIR_MAX;
 begin  
 
   debug_num_5 <= X"E";
@@ -84,9 +98,8 @@ begin
         i <= d;
         f <= e;
         g <= f;
-
-        c <= mem_out(resize("rol"(mem_write,1), 2));
-        d <= mem_out(resize("rol"(mem_write,2), 2));
+        c <= mem_out(to_integer(unsigned(mem_write(1 downto 0))));
+        d <= mem_out(to_integer(unsigned("rol"(mem_write,1)(1 downto 0))));
         e <= i_pixel;
         
       else
@@ -102,28 +115,20 @@ begin
         mem_write <= "001";
       elsif i_valid = '1' then
         if col_index = "11111111" then
-          row_index = row_state + 1;
+          row_index <= std_logic_vector(unsigned(row_index) + 1);
           mem_write <= "rol"(mem_write,1);
           col_index <= "00000000";
         elsif row_index = "11111111" then
           -- conclude
         else
-          col_index <= col_index + 1; 
+          col_index <= std_logic_vector(unsigned(col_index) + 1); 
         end if;
       end if;
     end process;
+
+  
   
 end architecture;
 
-procedure DIR_MAX (signal first, first_dir, second, second_dir: in std_logic_vector;
-                   signal result, result_dir : out std_logic_vector) is
-begin
-  if first >= second then
-    result = first;
-    result_dir = first_dir;
-  else
-    result= second;
-    result_dir = second_dir;
-  end if;
-end DIR_MAX;
+
       
