@@ -135,50 +135,58 @@ begin
   position_proc: process
     begin
       wait until rising_edge(i_clock);
+      calc_state <= "sll"(calc_state,1);
       if i_reset = '1' then
         row_index <= "00000000";
         col_index <= "00000000";
-        calc_state <= "00010001";
+        calc_state <= "00000000";
         mem_write <= "001";
       elsif i_valid = '1' then
+        calc_state(0) <= '1';
         if col_index = "11111111" then
-          row_index <= std_logic_vector(unsigned(row_index) + 1);
           mem_write <= "rol"(mem_write,1);
           col_index <= "00000000";
-          
           if row_index = "11111111" then
-          -- conclude
             row_index = "00000000";
-            o_valid = '1';
-            
+          else
+            row_index <= std_logic_vector(unsigned(row_index) + 1);
           end if;
         else
-          col_index <= std_logic_vector(unsigned(col_index) + 1); 
+          col_index <= std_logic_vector(unsigned(col_index) + 1);
         end if;
       end if;
-      calc_state <= "rol"(calc_state,1);
     end process;
 
-  pipeline_stage1_proc : process
+    pipeline_stage1_proc : process
     begin
       wait until rising_edge(i_clock);
       if calc_state(0) = '1' then
         DIR_MAX(h=>first, h_dir=>first_dir,c=>second, c_dir=>second_dir, nnw_dir=>result_dir, nnw_max=>result);
-        partial_sum <= a + b;
       elsif calc_state(1) = '1' then
         DIR_MAX(b=>first, b_dir=>first_dir,e=>second, e_dir=>second_dir, nee_dir=>result_dir, nee_max=>result);
-        partial_sum <= c + d;
       elsif calc_state(2) = '1' then
         DIR_MAX(d=>first, d_dir=>first_dir,g=>second, g_dir=>second_dir, ses_dir=>result_dir, ses_max=>result);
-        partial_sum <= e + f;
       elsif calc_state(3) = '1' then
         DIR_MAX(a=>first, a_dir=>first_dir,f=>second, f_dir=>second_dir, sww_dir=>result_dir, sww_max=>result);
-        partial_sum <= g + h;
       end if;
       
     end process;
-
-  dir_sum_proc : process(nnw_max, nee_max, ses_max, sww_max, partial_sum)
+    
+    partial_sum_proc : process
+    begin
+      wait until rising_edge(i_clock);
+      if calc_state(0) = '1' then
+        partial_sum <= a + b;
+      elsif calc_state(1) = '1' then
+        partial_sum <= c + d;
+      elsif calc_state(2) = '1' then
+        partial_sum <= e + f;
+      elsif calc_state(3) = '1' then
+        partial_sum <= g + h;
+      end if;
+    end process;
+    
+    dir_sum_proc : process(nnw_max, nee_max, ses_max, sww_max, partial_sum)
     begin
       if calc_state(0) = '1' then
         nnw_total <= nnw_max + partial_sum;
@@ -191,7 +199,7 @@ begin
       end if;
     end process;
 
-  final_sum_proc : process(partial_sum)
+    final_sum_proc : process(partial_sum)
     begin
       if calc_state(0) = '1' then
         sum <= partial_sum;
@@ -200,22 +208,19 @@ begin
       end if;
     end process;
 
-  pipeline_stage2_proc : process
+    pipeline_stage2_proc : process
     begin
       wait until rising_edge(i_clock);
       o_valid <= '0';
       if calc_state(4) = '1' then
         DIR_MAX(nnw_total=>first, nnw_dir=>first_dir,nee_total=>second, nee_dir=>second_dir, final_dir=>result_dir, final_max=>result);
-        final_sum <= (sum & "0") + sum;
       elsif calc_state(5) = '1' then
         DIR_MAX(final_max=>first, final_dir=>first_dir,ses_total=>second, ses_dir=>second_dir, final_dir=>result_dir, final_max=>result);
-        final_sum <= final_sum + 383;
       elsif calc_state(6) = '1' then
         DIR_MAX(final_max=>first, final_dir=>first_dir,sww_total=>second, sww_dir=>second_dir, final_dir=>result_dir, final_max=>result);
       elsif calc_state(7) = '1' then
-        final_max <= final_max & "000";
         o_valid <= '1';
-        if final_max > final_sum then
+        if (final_max & "000") > final_sum then
           o_edge <= '1';
           o_dir <= final_dir;
         else
@@ -224,8 +229,15 @@ begin
       end if;
     end process;
 
-  
-  
+    stage2_sum_proc : process
+    begin
+      wait until rising_edge(i_clock);
+      if calc_state(4) = '1' then
+        final_sum <= (sum & "0") + sum;
+      elsif calc_state(5) = '1' then
+        final_sum <= final_sum + 383;
+    end process;
+
 end architecture;
 
 
