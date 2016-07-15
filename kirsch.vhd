@@ -52,6 +52,7 @@ architecture main of kirsch is
   signal partial_sum : std_logic_vector (8 downto 0);
   signal sum, nnw_total, nee_total, ses_total, sww_total, final_max, final_sum : std_logic_vector (9 downto 0);
   signal mem_out : memory_out;
+  signal busy : std_logic;
   
   function "rol" (a : std_logic_vector; n : natural)
 		return std_logic_vector
@@ -125,7 +126,7 @@ begin
       wait until rising_edge(i_clock);
       if i_reset = '1' then
         o_mode <= "01";
-      elsif busy then
+      elsif busy = '1' then
         o_mode <= "11";
       else
         o_mode <= "10";
@@ -141,12 +142,15 @@ begin
         col_index <= "00000000";
         calc_state <= "00000000";
         mem_write <= "001";
+        busy <= '0';
       elsif i_valid = '1' then
         calc_state(0) <= '1';
+        busy <= '1';
         if col_index = "11111111" then
           mem_write <= "rol"(mem_write,1);
           col_index <= "00000000";
           if row_index = "11111111" then
+            busy <= '0';
             row_index = "00000000";
           else
             row_index <= std_logic_vector(unsigned(row_index) + 1);
