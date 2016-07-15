@@ -8,6 +8,8 @@ add wave -radix unsigned sim:/kirsch_tb/out_row
 add wave sim:/kirsch_tb/out_valid
 add wave sim:/kirsch_tb/out_edge
 add wave sim:/kirsch_tb/out_dir
+add wave sim:/kirsch_tb/out_value
+add wave sim:/kirsch_tb/out_value2
 
 
 run 10600000 ns

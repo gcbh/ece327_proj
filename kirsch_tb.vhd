@@ -63,7 +63,9 @@ architecture main of kirsch_tb is
   signal in_pixel       : pixel_ty;
   
   signal out_mode       : mode_ty;
-  signal out_row        : unsigned(7 downto 0); 
+  signal out_row        : unsigned(7 downto 0);
+  signal out_value      : unsigned(12 downto 0);
+  signal out_value2     : unsigned(12 downto 0);
   signal out_valid      : std_logic;
   signal out_edge       : std_logic;
   signal out_dir        : direction_ty;
@@ -92,7 +94,9 @@ begin
        direction_ty(o_dir)  => out_dir,
        mode_ty(o_mode)      => out_mode,
        unsigned(o_row)      => out_row,
-       unsigned(o_col)      => out_col,
+       o_value              => out_value,
+       o_value2             => out_value2,
+       --unsigned(o_col)      => out_col,
        debug_key            => (others => '0'),
        debug_switch         => (others => '0')
       );

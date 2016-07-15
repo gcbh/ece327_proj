@@ -38,7 +38,7 @@ end entity;
 
 architecture main of top_kirsch is
 
-  signal rst            : std_logic;
+  signal reset            : std_logic;
   signal pixavail       : std_logic;
   signal pixel          : std_logic_vector (7 downto 0);
   signal o_valid        : std_logic;
@@ -80,7 +80,7 @@ begin
       i_clock       => clk,
       i_valid       => pixavail, 
       i_pixel       => pixel,
-      i_reset       => rst,
+      i_reset       => reset,
       o_edge        => kirschout,
       o_valid       => o_valid,
       o_dir         => dir,
