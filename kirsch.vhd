@@ -49,11 +49,11 @@ architecture main of kirsch is
   
   type memory_out is array (0 to 2) of std_logic_vector (7 downto 0);
   signal mem_write : std_logic_vector(2 downto 0);
-  signal dir_1, dir_2, nnw_dir, nee_dir, ses_dir, sww_dir, final_dir : std_logic_vector (2 downto 0);
+  signal wnw_dir, nne_dir, ese_dir, ssw_dir, final_dir : std_logic_vector (2 downto 0);
   signal col_index, row_index, calc_state : std_logic_vector(7 downto 0);
-  signal a,b,c,d,e,f,g,h,i,nnw_max,nee_max,ses_max,sww_max : unsigned (7 downto 0);
-  signal partial_sum : unsigned (8 downto 0);
-  signal sum, clk1_total, clk2_total : unsigned (10 downto 0);
+  signal a,b,c,d,e,f,g,h,i,wnw_max,nne_max,ese_max,ssw_max : unsigned (7 downto 0);
+  signal partial_sum : unsigned (12 downto 0);
+  signal sum, clk1_total, clk2_total : unsigned (12 downto 0);
   signal final_sum, final_max, clk3_total, clk4_total : unsigned (12 downto 0);
   signal mem_out : memory_out;
   signal busy : std_logic;
@@ -73,15 +73,15 @@ architecture main of kirsch is
 	end function;
 
   procedure DIR_MAX (signal first, second : in unsigned ;
-                     signal first_dir, second_dir : in std_logic_vector;
+                   constant first_dir, second_dir : in std_logic_vector;
                    signal result : out unsigned;
                    signal result_dir : out std_logic_vector) is
   begin
     if first >= second then
-      result <= unsigned(first);
+      result <= first;
       result_dir <= first_dir;
     else
-      result <= unsigned(second);
+      result <= second;
       result_dir <= second_dir;
     end if;
   end DIR_MAX;
@@ -149,7 +149,8 @@ begin
         calc_state <= "00000000";
         mem_write <= "001";
         busy <= '0';
-      elsif i_valid = '1' then
+      end if;
+      if i_valid = '1' then
         calc_state(0) <= '1';
         busy <= '1';
         if col_index = "11111111" then
@@ -170,64 +171,64 @@ begin
     pipeline_stage1_proc : process
     begin
       wait until rising_edge(i_clock);
-      if i_valid = '1' then
-        dir_1 <= h_dir;
-        dir_2 <= c_dir;
-      elsif calc_state(0) = '1' then
-        DIR_MAX(h, c, dir_1, dir_2, nnw_max, nnw_dir);
-        partial_sum <= ("0" & a) + ("0" & b);
-        dir_1 <= b_dir;
-        dir_2 <= e_dir;
-        clk1_total <= ("000" & nnw_max) + ("00" & partial_sum);
+      
+      if calc_state(0) = '1' then
+        -- w v. nw
+        DIR_MAX(g, b, h_dir, a_dir, wnw_max, wnw_dir);
+        partial_sum <= ("00000" & h) + ("00000" & a);
+        clk1_total <= ("00000" & wnw_max) + partial_sum;--("00" & partial_sum);
+        sum <= "0000000000" + partial_sum;--("00" & partial_sum);
       elsif calc_state(1) = '1' then
-        DIR_MAX(b, e, dir_1, dir_2, nee_max, nee_dir);
-        partial_sum <= ("0" & c) + ("0" & d);
-        dir_1 <= d_dir;
-        dir_2 <= g_dir;
-        clk1_total <= ("000" & nee_max) + ("00" & partial_sum);
+        -- n v. ne
+        DIR_MAX(a, d, b_dir, c_dir, nne_max, nne_dir);
+        partial_sum <= ("00000" & b) + ("00000" & c);
+        clk1_total <= ("000" & nne_max) + partial_sum;--("00" & partial_sum);
+        sum <= sum + partial_sum;--("00" & partial_sum);
       elsif calc_state(2) = '1' then
-        DIR_MAX(d, g , dir_1, dir_2, ses_max, ses_dir);
-        partial_sum <=  ("0" & e) + ("0" & f);
-        dir_1 <= a_dir;
-        dir_2 <= f_dir;
-        clk1_total <= ("000" & ses_max) + ("00" & partial_sum);
+        -- e v. se
+        DIR_MAX(c, f, d_dir, e_dir, ese_max, ese_dir);
+        partial_sum <=  ("00000" & d) + ("00000" & e);
+        clk1_total <= ("000" & ese_max) + partial_sum;--("00" & partial_sum);
+        sum <= sum + partial_sum;--("00" & partial_sum);
       elsif calc_state(3) = '1' then
-        DIR_MAX(a, f, dir_1, dir_2, sww_max, sww_dir);
-        partial_sum <= ("0" & g) + ("0" & h);
-        clk1_total <= ("000" & sww_max) + ("00" & partial_sum);
+        -- s v. sw
+        DIR_MAX(e, h, f_dir, g_dir, ssw_max, ssw_dir);
+        partial_sum <= ("00000" & f) + ("00000" & g);
+        clk1_total <= ("00000" & ssw_max) + partial_sum;--("00" & partial_sum);
+        sum <= sum + partial_sum;--("00" & partial_sum);
       end if;
       
     end process;
    
-    final_sum_proc : process(partial_sum, i_valid)
-    begin
-      if i_valid = '1' then
-        sum <= "00000000000";
-      else
-        sum <= sum + ("00" & partial_sum);
-      end if;
-    end process;
+    --final_sum_proc : process(partial_sum)
+    --begin
+    --  if calc_state(0) = '1' then
+    --    sum <= "00000000000" +  ("00" & partial_sum);
+    --  else
+    --    sum <= sum + ("00" & partial_sum);
+    --  end if;
+    --end process;
 
     pipeline_stage2_proc : process
     begin
       wait until rising_edge(i_clock);
       o_valid <= '0';
       if calc_state(4) = '1' then
-        DIR_MAX(clk4_total, clk3_total, nnw_dir, nee_dir, final_max, final_dir);
+        DIR_MAX(clk4_total, clk3_total, wnw_dir, nne_dir, final_max, final_dir);
       elsif calc_state(5) = '1' then
-        DIR_MAX(final_max, clk3_total, final_dir, ses_dir, final_max, final_dir);
+        DIR_MAX(final_max, clk3_total, final_dir, ese_dir, final_max, final_dir);
       elsif calc_state(6) = '1' then
-        DIR_MAX(final_max, clk3_total, final_dir, sww_dir, final_max, final_dir);
+        DIR_MAX(final_max, clk3_total, final_dir, ssw_dir, final_max, final_dir);
       elsif calc_state(7) = '1' then
-        if row_index >= "00000010" and col_index >= "00000010" then
-        o_valid <= '1';
-        if ("sll"(final_max, 3)) > final_sum then
-          o_edge <= '1';
-          o_dir <= final_dir;
-        else
-          o_edge <= '0';
-          o_dir <= "000";
-        end if;
+        if row_index >= "00000010" then
+          if ("sll"(final_max, 3)) > final_sum then
+            o_edge <= '1';
+            o_dir <= final_dir;
+          else
+            o_edge <= '0';
+            o_dir <= d_dir;
+          end if;
+           o_valid <= '1';
         end if;
       end if;
     end process;
@@ -236,7 +237,7 @@ begin
     begin
       wait until rising_edge(i_clock);
       if calc_state(4) = '1' then
-        final_sum <= ("sll"(("00" & sum), 1)) + ("00" & sum);
+        final_sum <= "sll"(sum,1) + sum;
       elsif calc_state(5) = '1' then
         final_sum <= final_sum + 383;
       else
@@ -248,14 +249,13 @@ begin
       begin
         wait until rising_edge(i_clock);
         clk2_total <= clk1_total;
-        clk3_total <= "00" & clk2_total;
+        clk3_total <= clk2_total;--"00" & clk2_total;
         clk4_total <= clk3_total;
       end process;
-
-    
-    o_row <= calc_state;
-    o_value <= final_sum;
-    o_value2 <= "sll"(final_max,3);
+      
+    o_row <= std_logic_vector(partial_sum(7 downto 0));
+    o_value <= sum;
+    o_value2 <= final_sum;
 
 end architecture;
 

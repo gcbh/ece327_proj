@@ -9,7 +9,7 @@ use ieee.numeric_std.all;
 use work.kirsch_synth_pkg.all;
 use work.kirsch_unsynth_pkg.all;
 
-entity kirsch is
+entity kirsch_spec is
   port(
     ------------------------------------------
     -- main inputs and outputs
@@ -36,10 +36,10 @@ entity kirsch is
     debug_num_5    : out std_logic_vector(3 downto 0) 
     ------------------------------------------
   );  
-end kirsch;
+end kirsch_spec;
 
 
-architecture main of kirsch is
+architecture main of kirsch_spec is
 
   --------------------------------------------------------------
   -- 3x3 table of pixels for edge detection
