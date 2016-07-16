@@ -56,7 +56,6 @@ architecture main of kirsch is
   signal sum, clk1_total, clk2_total : unsigned (12 downto 0);
   signal final_sum, final_max, clk3_total, clk4_total : unsigned (12 downto 0);
   signal mem_out : memory_out;
-  signal vrow1data, vrow2data : unsigned(7 downto 0);
   signal busy, done_flag : std_logic;
   
   function "rol" (a : std_logic_vector; n : natural)
@@ -150,25 +149,7 @@ begin
       end if;
     end if;
   end process;
-	
-    -- mux to determine mapping between actual row count and virtual row count
-    process (mem_write,mem_out,i_pixel) begin
-      case mem_write is
-       	when "001" =>
-	  vrow1data <= unsigned(mem_out(1));
-          vrow2data <= unsigned(mem_out(2));
-	when "010" =>
-	  vrow1data <= unsigned(mem_out(2));
-	  vrow2data <= unsigned(mem_out(0));
-	when "100" =>
-          vrow1data <= unsigned(mem_out(0));
-          vrow2data <= unsigned(mem_out(1));
-	when others =>
-          vrow1data <= "00000000";
-          vrow2data <= "00000000";
-      end case;	
-    end process;
-    
+  
     process begin
       wait until rising_edge(i_clock);
       if i_valid = '1' then
@@ -178,8 +159,8 @@ begin
 	b <= c;
 	i <= d;
 	f <= e;
-	c <= "00" & vrow1data;
-	d <= "00" & vrow2data;
+	c <= "00" & unsigned(mem_out(to_integer(unsigned(mem_write(1 downto 0)))));
+	d <= "00" & unsigned(mem_out(to_integer(unsigned("rol"(mem_write,1)(1 downto 0)))));
 	e <= "00" & unsigned(i_pixel);
       end if;	
     end process;
