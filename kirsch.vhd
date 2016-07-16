@@ -56,9 +56,8 @@ architecture main of kirsch is
   signal sum, clk1_total, clk2_total : unsigned (12 downto 0);
   signal final_sum, final_max, clk3_total, clk4_total : unsigned (12 downto 0);
   signal mem_out : memory_out;
-  signal vrow1data : unsigned(7 downto 0);
-  signal vrow2data : unsigned(7 downto 0);
-  signal busy_flag, done_flag : std_logic;
+  signal vrow1data, vrow2data : unsigned(7 downto 0);
+  signal busy, done_flag : std_logic;
   
   function "rol" (a : std_logic_vector; n : natural)
 		return std_logic_vector
@@ -111,14 +110,12 @@ begin
                 );
   end generate; 
 
-  
-
   FSM : process
     begin
       wait until rising_edge(i_clock);
       if i_reset = '1' then
         o_mode <= "01";
-      elsif busy_flag = '1' then
+      elsif busy = '1' then
         o_mode <= "11";
       else
         o_mode <= "10";
@@ -126,68 +123,66 @@ begin
     end process;
 
   -- 8 bit counter to represent bottom right location of convolution table
-	process begin
-		wait until rising_edge(i_clock);
-			if i_reset = '1' then
-				col_index <= "00000000";
-				mem_write <="001";
-				v_row <= "00000000";
+  process begin
+    wait until rising_edge(i_clock);
+    if i_reset = '1' then
+      col_index <= "00000000";
+      mem_write <="001";
+      v_row <= "00000000";
                                
-				done_flag <= '0';
-				busy_flag <= '0';
-			elsif i_valid = '1' then
-				if done_flag = '1' then
-					done_flag <= '0';
-					v_row <= "00000000";
-				end if;
-				busy_flag <= '1';
-				col_index <= std_logic_vector(unsigned(col_index) + 1);
-				if col_index = "11111111" then
-					mem_write <= "rol" (mem_write,1);
-					if (v_row = "11111111") then
-						busy_flag <= '0';
-						done_flag <= '1';
-					else
-						v_row <= std_logic_vector(unsigned(v_row) + 1);
-					end if;
-				end if;
-			end if;
-	end process;
+      done_flag <= '0';
+      busy <= '0';
+    elsif i_valid = '1' then
+      if done_flag = '1' then
+        done_flag <= '0';
+        v_row <= "00000000";
+      end if;
+      busy <= '1';
+      col_index <= std_logic_vector(unsigned(col_index) + 1);
+      if col_index = "11111111" then
+        mem_write <= "rol" (mem_write,1);
+        if (v_row = "11111111") then
+          busy <= '0';
+          done_flag <= '1';
+        else
+          v_row <= std_logic_vector(unsigned(v_row) + 1);
+        end if;
+      end if;
+    end if;
+  end process;
 	
-	-- mux to determine mapping between actual row count and virtual row count
-	process (mem_write,mem_out,i_pixel) begin
-		case mem_write is
-			when "001" =>
-				vrow1data <= unsigned(mem_out(1));
-				vrow2data <= unsigned(mem_out(2));
-			when "010" =>
-				vrow1data <= unsigned(mem_out(2));
-				vrow2data <= unsigned(mem_out(0));
-			when "100" =>
-				vrow1data <= unsigned(mem_out(0));
-				vrow2data <= unsigned(mem_out(1));
-			when others =>
-				vrow1data <= "00000000";
-				vrow2data <= "00000000";
-		end case;	
-	end process;
-
+    -- mux to determine mapping between actual row count and virtual row count
+    process (mem_write,mem_out,i_pixel) begin
+      case mem_write is
+       	when "001" =>
+	  vrow1data <= unsigned(mem_out(1));
+          vrow2data <= unsigned(mem_out(2));
+	when "010" =>
+	  vrow1data <= unsigned(mem_out(2));
+	  vrow2data <= unsigned(mem_out(0));
+	when "100" =>
+          vrow1data <= unsigned(mem_out(0));
+          vrow2data <= unsigned(mem_out(1));
+	when others =>
+          vrow1data <= "00000000";
+          vrow2data <= "00000000";
+      end case;	
+    end process;
+    
     process begin
-		wait until rising_edge(i_clock);
-		if i_valid = '1' then
-			a <= b;
-			h <= i;
-			g <= f;
-			b <= c;
-			i <= d;
-			f <= e;
-			c <= "00" & vrow1data;
-			d <= "00" & vrow2data;
-			e <= "00" & unsigned(i_pixel);
-		end if;
-	
-
-	end process;
+      wait until rising_edge(i_clock);
+      if i_valid = '1' then
+	a <= b;
+        h <= i;
+	g <= f;
+	b <= c;
+	i <= d;
+	f <= e;
+	c <= "00" & vrow1data;
+	d <= "00" & vrow2data;
+	e <= "00" & unsigned(i_pixel);
+      end if;	
+    end process;
 
     pipeline_stage1_proc : process
     begin
@@ -207,8 +202,7 @@ begin
         elsif calc_state(1) = '1' then
           -- n v. ne
           DIR_MAX(a, d, b_dir, c_dir, dir1_max, nne_dir);
-          partial_sum <= ("000" & b) + ("000" & c);
-          sum <= sum + ("000" & b) + ("000" & c);
+          partial_sum <= ("000" & b) + ("000" & c);          sum <= sum + ("000" & b) + ("000" & c);
         elsif calc_state(2) = '1' then
           -- e v. se
           DIR_MAX(c, f, d_dir, e_dir, dir1_max, ese_dir);
@@ -220,19 +214,13 @@ begin
           partial_sum <= ("000" & f) + ("000" & g);
           sum <= sum + ("000" & f) + ("000" & g);
         end if;
-      --clk1_total <= ("000" & dir1_max) + partial_sum;
       end if;
       
     end process;
 
-    final_sum_proc : process(partial_sum, dir1_max)
+    clk1_proc : process(partial_sum, dir1_max)
     begin
       clk1_total <= ("000" & dir1_max) + partial_sum;
-    --  if calc_state(0) = '1' then
-    --    sum <= partial_sum;
-    --  else
-    --    sum <= sum + partial_sum;
-    --  end if;
     end process;
 
     pipeline_stage2_proc : process
@@ -254,7 +242,7 @@ begin
             o_edge <= '0';
             o_dir <= d_dir;
           end if;
-           o_valid <= '1';
+          o_valid <= '1';
         end if;
       end if;
     end process;
@@ -275,13 +263,11 @@ begin
       begin
         wait until rising_edge(i_clock);
         clk2_total <= clk1_total;
-        clk3_total <= clk2_total;--"00" & clk2_total;
+        clk3_total <= clk2_total;
         clk4_total <= clk3_total;
       end process;
       
-    o_row <= std_logic_vector(partial_sum(7 downto 0));
-    o_value <= sum;
-    o_value2 <= final_sum;
+    o_row <= calc_state;
 
 end architecture;
 
