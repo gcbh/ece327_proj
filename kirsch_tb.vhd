@@ -24,7 +24,7 @@ entity kirsch_tb is
   generic (
     test_num      : natural := 1;
     result_suffix : string  := "sim";
-    bubbles       : natural := 10;
+    bubbles       : natural := 3;
     period        : real    := 20.0
   );
 end kirsch_tb;
@@ -94,8 +94,8 @@ begin
        direction_ty(o_dir)  => out_dir,
        mode_ty(o_mode)      => out_mode,
        unsigned(o_row)      => out_row,
-       --o_value              => out_value,
-       --o_value2             => out_value2,
+       o_value              => out_value,
+       o_value2             => out_value2,
        --unsigned(o_col)      => out_col,
        debug_key            => (others => '0'),
        debug_switch         => (others => '0')
