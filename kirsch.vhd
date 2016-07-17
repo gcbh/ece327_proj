@@ -212,9 +212,9 @@ begin
   sum_stage1_proc : process (partial_sum, sum_zero)
   begin
     if sum_zero = '1'  then
-      sum <= "0000000000000" + ("00000" & partial_sum);
+      sum <= "00000000000" + ("0000" & partial_sum);
     else
-      sum <= sum + ("00000" & partial_sum);
+      sum <= sum + ("0000" & partial_sum);
     end if;
   end process;
   
